@@ -1744,6 +1744,22 @@ static	DWORD MCI_Open(DWORD dwParam, LPMCI_OPEN_PARMSW lpParms)
 	TRACE("devType=%s !\n", debugstr_w(strDevTyp));
     }
 
+    /* A file name given as the device type opens that file, like "open foo.ext": the device
+     * is chosen by the extension. Some applications call it this way. */
+    if ((dwParam & MCI_OPEN_TYPE) && !(dwParam & (MCI_OPEN_TYPE_ID | MCI_OPEN_ELEMENT)) &&
+        wcschr(strDevTyp, '.'))
+    {
+        WCHAR extDevTyp[128];
+
+        if (!MCI_GetDevTypeFromFileName(strDevTyp, extDevTyp, sizeof(extDevTyp)))
+        {
+            /* FIXME: not a good idea to write in user supplied buffer */
+            lpParms->lpstrElementName = lpParms->lpstrDeviceType;
+            lstrcpyW(strDevTyp, extDevTyp);
+            dwParam = (dwParam & ~MCI_OPEN_TYPE) | MCI_OPEN_ELEMENT;
+        }
+    }
+
     if (dwParam & MCI_OPEN_ELEMENT) {
 	TRACE("lpstrElementName=%s\n", debugstr_w(lpParms->lpstrElementName));
 
